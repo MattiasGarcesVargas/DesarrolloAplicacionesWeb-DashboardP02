@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Grid, Box, Typography, Container } from '@mui/material';
 import HeaderUI from './components/HeaderUI';
 import AlertUI from './components/AlertUI';
@@ -22,7 +21,7 @@ interface PlayerData {
   color: string;
 }
 
-export default function App() {
+export default function AppEsqueleto() {
   // NBA Player dataset mockup reflecting the CSV stats
   const allPlayers: PlayerData[] = [
     { id: '1', name: 'Luka Doncic', rank: 6, rating: '+4.4', team: 'DAL', pts: 32.4, reb: 8.6, ast: 8.0, stl: 1.4, blk: 0.5, gradient: 'linear-gradient(135deg, #00538c 0%, #1e3a8a 100%)', color: '#3b82f6' },
@@ -36,72 +35,19 @@ export default function App() {
     { id: '9', name: 'Kevin Durant', rank: 14, rating: '+3.2', team: 'PHX', pts: 29.1, ast: 5.0, reb: 6.7, stl: 0.7, blk: 1.4, gradient: 'linear-gradient(135deg, #1d428a 0%, #fdb927 100%)', color: '#eab308' }
   ];
 
-  // States
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(['1', '2', '7']); // Luka, Mitchell, Tatum preselected
-  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
-  const [alertConfig, setAlertConfig] = useState({
-    description: "Éxito: Se han cargado 540 registros de jugadores de la temporada 2023. Haz clic en las tarjetas para comparar.",
+  // Static pre-selected player IDs (no State, purely visual)
+  const selectedPlayerIds: string[] = []; // No players selected on start
+
+  // Static Alert Config
+  const alertConfig = {
+    description: "Éxito: Estructura del Dashboard de la NBA cargada. Se visualizan 540 registros de jugadores de la temporada 2023.",
     severity: "success" as 'success' | 'info' | 'warning'
-  });
-
-  const handleTogglePlayer = (id: string) => {
-    const player = allPlayers.find(p => p.id === id);
-    if (!player) return;
-
-    if (selectedPlayerIds.includes(id)) {
-      setSelectedPlayerIds(prev => prev.filter(pId => pId !== id));
-      setAlertConfig({
-        description: `Info: Se removió a ${player.name} de la comparación.`,
-        severity: "info"
-      });
-    } else {
-      if (selectedPlayerIds.length >= 4) {
-        setAlertConfig({
-          description: "Advertencia: Puedes comparar un máximo de 4 jugadores a la vez.",
-          severity: "warning"
-        });
-        return;
-      }
-      setSelectedPlayerIds(prev => [...prev, id]);
-      setAlertConfig({
-        description: `Seleccionado: ${player.name} (${player.team}) - Promedio de PTS: ${player.pts}, AST: ${player.ast}, REB: ${player.reb}`,
-        severity: "success"
-      });
-    }
-  };
-
-  const handleSelectPlayerByName = (name: string) => {
-    const player = allPlayers.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
-    if (player) {
-      if (!selectedPlayerIds.includes(player.id)) {
-        handleTogglePlayer(player.id);
-      } else {
-        setAlertConfig({
-          description: `Info: ${player.name} ya se encuentra seleccionado.`,
-          severity: "info"
-        });
-      }
-    } else {
-      setAlertConfig({
-        description: `Búsqueda: ${name} no se encuentra en el carrusel superior, pero está en la base de datos completa.`,
-        severity: "info"
-      });
-    }
-  };
-
-  const handleAddNextPlayer = () => {
-    const unselected = allPlayers.find(p => !selectedPlayerIds.includes(p.id));
-    if (unselected) {
-      handleTogglePlayer(unselected.id);
-    } else {
-      setAlertConfig({
-        description: "Advertencia: Todos los jugadores de demostración ya han sido agregados.",
-        severity: "warning"
-      });
-    }
   };
 
   const selectedPlayersData = allPlayers.filter(p => selectedPlayerIds.includes(p.id));
+
+  // No-op handlers to keep the TS components happy, while being non-functional
+  const handleNoOp = () => { };
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'var(--bg-main)', pb: 8 }}>
@@ -119,13 +65,13 @@ export default function App() {
           {/* 3. Selector & Sidebar (PlayerBrowser - Left side or Sidebar role) */}
           <Grid size={{ xs: 12, md: 3 }}>
             <PlayerBrowser
-              onSelectPlayerByName={handleSelectPlayerByName}
-              selectedTeam={selectedTeam}
-              onSelectTeam={setSelectedTeam}
+              onSelectPlayerByName={handleNoOp}
+              selectedTeam={null}
+              onSelectTeam={handleNoOp}
             />
           </Grid>
 
-          {/* 4. Indicadores (Horizontal player cards scroll carousel & comparison layout) */}
+          {/* 4. Indicadores (Horizontal player cards scroll carousel) */}
           <Grid size={{ xs: 12, md: 9 }} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Typography
@@ -153,10 +99,10 @@ export default function App() {
                     team={player.team}
                     gradient={player.gradient}
                     isSelected={selectedPlayerIds.includes(player.id)}
-                    onClick={() => handleTogglePlayer(player.id)}
+                    onClick={handleNoOp}
                   />
                 ))}
-                <AddPlayerCard onClick={handleAddNextPlayer} />
+                <AddPlayerCard onClick={handleNoOp} />
               </Box>
             </Box>
 
@@ -175,7 +121,7 @@ export default function App() {
                 size={{ xs: 12, md: 6 }}
                 sx={{ display: { xs: "none", md: "block" } }}
               >
-                <StatsTable onSelectPlayerByName={handleSelectPlayerByName} selectedTeam={selectedTeam} />
+                <StatsTable onSelectPlayerByName={handleNoOp} selectedTeam={null} />
               </Grid>
             </Grid>
           </Grid>
@@ -192,21 +138,14 @@ export default function App() {
               }}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'var(--nba-orange)', mb: 1, fontFamily: 'var(--font-display)' }}>
-                ℹ️ INFORMACIÓN Y FUENTE DE DATOS
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.5, fontSize: '0.85rem' }}>
-                Este dashboard es una demostración de la estructura interactiva para el **Proyecto 2 (Desarrollo de Aplicaciones Web)**.
-                Consume un dataset de Kaggle con estadísticas avanzadas de la NBA del 2023. La estructura de rejilla y la responsividad están desarrolladas usando **MUI Grid**, permitiendo visualizaciones fluidas en tablets, computadoras y smartphones.
+                INFORMACIÓN Y FUENTE DE DATOS
               </Typography>
               <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                 <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                  Dataset: <strong>2023_nba_player_stats.csv</strong>
+                  Dataset de referencia: <strong>2023_nba_player_stats.csv</strong>
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                  URL en Kaggle: <a href="https://www.kaggle.com/" target="_blank" style={{ color: 'var(--nba-gold)', textDecoration: 'none' }}>kaggle.com/nba-stats-2023</a>
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                  Librerías principales: <strong>React 19</strong>, <strong>MUI Material 9.0</strong>, <strong>TypeScript</strong>
+                  URL original: <a href="https://www.kaggle.com/" target="_blank" style={{ color: 'var(--nba-gold)', textDecoration: 'none' }}>kaggle.com/nba-stats-2023</a>
                 </Typography>
               </Box>
             </Box>
