@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { Box, Typography, TextField, Chip, List, ListItem, ListItemButton, ListItemText } from '@mui/material';
 
+interface Player {
+  id: string;
+  name: string;
+  rank: number;
+  team: string;
+}
+
 interface PlayerBrowserProps {
   onSelectPlayerByName: (name: string) => void;
   selectedTeam: string | null;
   onSelectTeam: (team: string | null) => void;
+  players: Player[];
 }
 
-export default function PlayerBrowser({ onSelectPlayerByName, selectedTeam, onSelectTeam }: PlayerBrowserProps) {
+export default function PlayerBrowser({ onSelectPlayerByName, selectedTeam, onSelectTeam, players }: PlayerBrowserProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const teams = [
@@ -16,30 +24,11 @@ export default function PlayerBrowser({ onSelectPlayerByName, selectedTeam, onSe
     "OKC", "ORL", "PHI", "PHX", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
   ];
 
-  const topRankings = [
-    { rank: 1, name: "Nikola Jokic", team: "DEN" },
-    { rank: 2, name: "Victor Wembanyama", team: "SAS" },
-    { rank: 3, name: "Kawhi Leonard", team: "LAC" },
-    { rank: 4, name: "Shai Gilgeous-Alexander", team: "OKC" },
-    { rank: 5, name: "Giannis Antetokounmpo", team: "MIL" },
-    { rank: 6, name: "Luka Doncic", team: "DAL" },
-    { rank: 7, name: "Donovan Mitchell", team: "CLE" },
-    { rank: 8, name: "Karl-Anthony Towns", team: "MIN" },
-    { rank: 9, name: "Cade Cunningham", team: "DET" },
-    { rank: 10, name: "Anthony Edwards", team: "MIN" },
-    { rank: 11, name: "O.G. Anunoby", team: "NYK" },
-    { rank: 12, name: "Jayson Tatum", team: "BOS" },
-    { rank: 13, name: "Jalen Brunson", team: "NYK" },
-    { rank: 14, name: "Kevin Durant", team: "PHX" },
-    { rank: 15, name: "Chet Holmgren", team: "OKC" },
-    { rank: 16, name: "Scottie Barnes", team: "TOR" },
-    { rank: 17, name: "Jamal Murray", team: "DEN" },
-    { rank: 18, name: "Mitchell Robinson", team: "NYK" },
-    { rank: 19, name: "LaMelo Ball", team: "CHA" },
-    { rank: 20, name: "James Harden", team: "LAC" }
-  ];
+  // If there's a search query or a team filter, search across all players.
+  // Otherwise, display the top 20 players as the default list.
+  const basePlayers = (searchQuery || selectedTeam) ? players : players.slice(0, 20);
 
-  const filteredRankings = topRankings.filter(p => {
+  const filteredRankings = basePlayers.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTeam = selectedTeam ? p.team === selectedTeam : true;
     return matchesSearch && matchesTeam;

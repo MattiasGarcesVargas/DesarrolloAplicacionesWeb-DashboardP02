@@ -1,48 +1,86 @@
-import { useState } from 'react';
-import { Grid, Box, Typography, Container } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Grid, Box, Typography, Container, CircularProgress } from '@mui/material';
 import HeaderUI from './components/HeaderUI';
 import AlertUI from './components/AlertUI';
 import { PlayerCard, AddPlayerCard } from './components/PlayerCard';
 import PlayerBrowser from './components/PlayerBrowser';
 import StatsChart from './components/StatsChart';
 import StatsTable from './components/StatsTable';
-
-interface PlayerData {
-  id: string;
-  name: string;
-  rank: number;
-  rating: string;
-  team: string;
-  pts: number;
-  reb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  gradient: string;
-  color: string;
-}
+import { getTeamStyle } from './utils/teamStyles';
+import type { PlayerData } from './types/player';
 
 export default function App() {
-  // NBA Player dataset mockup reflecting the CSV stats
-  const allPlayers: PlayerData[] = [
-    { id: '1', name: 'Luka Doncic', rank: 6, rating: '+4.4', team: 'DAL', pts: 32.4, reb: 8.6, ast: 8.0, stl: 1.4, blk: 0.5, gradient: 'linear-gradient(135deg, #00538c 0%, #1e3a8a 100%)', color: '#3b82f6' },
-    { id: '2', name: 'Donovan Mitchell', rank: 7, rating: '+3.9', team: 'CLE', pts: 28.3, reb: 4.3, ast: 4.4, stl: 1.5, blk: 0.4, gradient: 'linear-gradient(135deg, #860038 0%, #4c0519 100%)', color: '#ec4899' },
-    { id: '3', name: 'Karl-Anthony Towns', rank: 8, rating: '+3.6', team: 'MIN', pts: 20.8, reb: 8.1, ast: 4.8, stl: 0.7, blk: 0.6, gradient: 'linear-gradient(135deg, #0c2340 0%, #061126 100%)', color: '#10b981' },
-    { id: '4', name: 'Cade Cunningham', rank: 9, rating: '+3.6', team: 'DET', pts: 19.9, ast: 6.0, reb: 6.2, stl: 0.8, blk: 0.6, gradient: 'linear-gradient(135deg, #1d428a 0%, #ed174c 100%)', color: '#ef4444' },
-    { id: '5', name: 'Anthony Edwards', rank: 10, rating: '+3.6', team: 'MIN', pts: 24.6, reb: 5.8, ast: 4.4, stl: 1.6, blk: 0.7, gradient: 'linear-gradient(135deg, #236192 0%, #0c2340 100%)', color: '#10b981' },
-    { id: '6', name: 'O.G. Anunoby', rank: 11, rating: '+3.5', team: 'NYK', pts: 16.8, ast: 2.0, reb: 5.0, stl: 1.2, blk: 0.7, gradient: 'linear-gradient(135deg, #f58426 0%, #006bb6 100%)', color: '#f58426' },
-    { id: '7', name: 'Jayson Tatum', rank: 12, rating: '+3.4', team: 'BOS', pts: 30.1, reb: 8.8, ast: 4.6, stl: 1.1, blk: 0.7, gradient: 'linear-gradient(135deg, #008348 0%, #0d5c34 100%)', color: '#008348' },
-    { id: '8', name: 'Jalen Brunson', rank: 13, rating: '+3.3', team: 'NYK', pts: 24.0, ast: 6.2, reb: 3.5, stl: 0.9, blk: 0.2, gradient: 'linear-gradient(135deg, #006bb6 0%, #1e3a8a 100%)', color: '#3b82f6' },
-    { id: '9', name: 'Kevin Durant', rank: 14, rating: '+3.2', team: 'PHX', pts: 29.1, ast: 5.0, reb: 6.7, stl: 0.7, blk: 1.4, gradient: 'linear-gradient(135deg, #1d428a 0%, #fdb927 100%)', color: '#eab308' }
-  ];
-
-  // States
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(['1', '2', '7']); // Luka, Mitchell, Tatum preselected
+  const [allPlayers, setAllPlayers] = useState<PlayerData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>(['1', '2', '7']); // Preselected players
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [alertConfig, setAlertConfig] = useState({
-    description: "Éxito: Se han cargado 540 registros de jugadores de la temporada 2023. Haz clic en las tarjetas para comparar.",
-    severity: "success" as 'success' | 'info' | 'warning'
+    description: "Conectando a Firebase...",
+    severity: "info" as 'success' | 'info' | 'warning'
   });
+
+  // Fetch NBA Player stats from Firebase REST endpoint
+  useEffect(() => {
+    fetch('https://dashboard-2023nba-default-rtdb.firebaseio.com/data.json')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al conectar con la base de datos de Firebase');
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          const mapped = data
+            .filter((p: any) => p && p.Column1 && p.Column1 !== "PName")
+            .map((p: any, idx: number) => {
+              const gp = Number(p.Column5) || 1;
+              const pts = Number(p.Column9) || 0;
+              const reb = Number(p.Column21) || 0;
+              const ast = Number(p.Column22) || 0;
+              const stl = Number(p.Column24) || 0;
+              const blk = Number(p.Column25) || 0;
+              const totalMin = Number(p.Column8) || 0;
+
+              const team = p.Column3 || "N/A";
+              const style = getTeamStyle(team);
+
+              return {
+                id: String(idx + 1),
+                name: p.Column1,
+                rank: idx + 1,
+                position: p.Column2 || "",
+                team: team,
+                age: Number(p.Column4) || 0,
+                gp: gp,
+                min: Number((totalMin / gp).toFixed(1)),
+                pts: Number((pts / gp).toFixed(1)),
+                reb: Number((reb / gp).toFixed(1)),
+                ast: Number((ast / gp).toFixed(1)),
+                stl: Number((stl / gp).toFixed(1)),
+                blk: Number((blk / gp).toFixed(1)),
+                fgPct: Number(p.Column12) || 0,
+                threePct: Number(p.Column15) || 0,
+                plusMinus: Number(p.Column30) || 0,
+                gradient: style.gradient,
+                color: style.color,
+                rating: Number(p.Column30) >= 0 ? `+${p.Column30}` : String(p.Column30)
+              };
+            });
+          setAllPlayers(mapped);
+          setAlertConfig({
+            description: `Éxito: Se han cargado ${mapped.length} registros de jugadores en tiempo real desde Firebase. Haz clic en las tarjetas para comparar.`,
+            severity: "success"
+          });
+        }
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error(error);
+        setAlertConfig({
+          description: "Error: No se pudo conectar a Firebase. Por favor revisa tu conexión.",
+          severity: "warning"
+        });
+        setLoading(false);
+      });
+  }, []);
 
   const handleTogglePlayer = (id: string) => {
     const player = allPlayers.find(p => p.id === id);
@@ -103,117 +141,149 @@ export default function App() {
 
   const selectedPlayersData = allPlayers.filter(p => selectedPlayerIds.includes(p.id));
 
+  // Show top 10 players + any selected player in the carousel
+  const carouselPlayers = allPlayers.filter((p, idx) => idx < 10 || selectedPlayerIds.includes(p.id));
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'var(--bg-main)', pb: 8 }}>
       {/* 1. Encabezado */}
       <HeaderUI />
 
       <Container maxWidth="xl" sx={{ mt: 2, px: { xs: 2, md: 4 } }}>
-        <Grid container spacing={4} sx={{ justifyContent: "center", alignItems: "stretch" }}>
-
-          {/* 2. Alertas */}
-          <Grid size={{ xs: 12 }}>
-            <AlertUI description={alertConfig.description} severity={alertConfig.severity} />
-          </Grid>
-
-          {/* 3. Selector & Sidebar (PlayerBrowser - Left side or Sidebar role) */}
-          <Grid size={{ xs: 12, md: 3 }}>
-            <PlayerBrowser
-              onSelectPlayerByName={handleSelectPlayerByName}
-              selectedTeam={selectedTeam}
-              onSelectTeam={setSelectedTeam}
-            />
-          </Grid>
-
-          {/* 4. Indicadores (Horizontal player cards scroll carousel & comparison layout) */}
-          <Grid size={{ xs: 12, md: 9 }} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Typography
-                variant="subtitle2"
+        {loading ? (
+          <Grid container spacing={4} sx={{ justifyContent: "center", alignItems: "center", minHeight: 400 }}>
+            <Grid size={{ xs: 12 }} sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Box
+                className="glass-panel"
                 sx={{
-                  fontWeight: 800,
-                  color: 'var(--text-secondary)',
-                  letterSpacing: '1px',
-                  fontFamily: 'var(--font-display)',
-                  textTransform: 'uppercase'
+                  p: 5,
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                  bgcolor: '#0a0d16',
+                  borderColor: 'rgba(255,255,255,0.06)'
                 }}
               >
-                🔥 JUGADORES CLAVE SELECCIONADOS
-              </Typography>
-
-              {/* Cards Carousel Area */}
-              <Box className="scroll-carousel">
-                {allPlayers.map((player) => (
-                  <PlayerCard
-                    key={player.id}
-                    id={player.id}
-                    name={player.name}
-                    rank={player.rank}
-                    rating={player.rating}
-                    team={player.team}
-                    gradient={player.gradient}
-                    isSelected={selectedPlayerIds.includes(player.id)}
-                    onClick={() => handleTogglePlayer(player.id)}
-                  />
-                ))}
-                <AddPlayerCard onClick={handleAddNextPlayer} />
+                <CircularProgress sx={{ color: 'var(--nba-orange)' }} />
+                <Typography sx={{ color: '#fff', fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '1px' }}>
+                  CONECTANDO A FIREBASE DATABASE...
+                </Typography>
+                <Typography sx={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                  Cargando estadísticas en tiempo real de la temporada de la NBA
+                </Typography>
               </Box>
-            </Box>
-
-            {/* Charts & Tables Grid (Gráfico y Tabla) */}
-            <Grid container spacing={3}>
-              {/* 5. Gráfico (Comparison chart, hidden on xs, block on md+) */}
-              <Grid
-                size={{ xs: 12, md: 6 }}
-                sx={{ display: { xs: "none", md: "block" } }}
-              >
-                <StatsChart selectedPlayers={selectedPlayersData} />
-              </Grid>
-
-              {/* 6. Tabla (Stats Table, hidden on xs, block on md+) */}
-              <Grid
-                size={{ xs: 12, md: 6 }}
-                sx={{ display: { xs: "none", md: "block" } }}
-              >
-                <StatsTable onSelectPlayerByName={handleSelectPlayerByName} selectedTeam={selectedTeam} />
-              </Grid>
             </Grid>
           </Grid>
+        ) : (
+          <Grid container spacing={4} sx={{ justifyContent: "center", alignItems: "stretch" }}>
+            {/* 2. Alertas */}
+            <Grid size={{ xs: 12 }}>
+              <AlertUI description={alertConfig.description} severity={alertConfig.severity} />
+            </Grid>
 
-          {/* 7. Información adicional (Footer references/documentation links) */}
-          <Grid size={{ xs: 12 }} sx={{ mt: 5 }}>
-            <Box
-              className="glass-panel"
-              sx={{
-                p: 3,
-                bgcolor: 'rgba(10, 13, 22, 0.4)',
-                borderColor: 'rgba(255, 255, 255, 0.04)',
-                textAlign: 'left'
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'var(--nba-orange)', mb: 1, fontFamily: 'var(--font-display)' }}>
-                ℹ️ INFORMACIÓN Y FUENTE DE DATOS
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.5, fontSize: '0.85rem' }}>
-                Este dashboard es una demostración de la estructura interactiva para el **Proyecto 2 (Desarrollo de Aplicaciones Web)**.
-                Consume un dataset de Kaggle con estadísticas avanzadas de la NBA del 2023. La estructura de rejilla y la responsividad están desarrolladas usando **MUI Grid**, permitiendo visualizaciones fluidas en tablets, computadoras y smartphones.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                  Dataset: <strong>2023_nba_player_stats.csv</strong>
+            {/* 3. Selector & Sidebar (PlayerBrowser) */}
+            <Grid size={{ xs: 12, md: 3 }}>
+              <PlayerBrowser
+                onSelectPlayerByName={handleSelectPlayerByName}
+                selectedTeam={selectedTeam}
+                onSelectTeam={setSelectedTeam}
+                players={allPlayers}
+              />
+            </Grid>
+
+            {/* 4. Indicadores (Horizontal player cards scroll carousel & comparison layout) */}
+            <Grid size={{ xs: 12, md: 9 }} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: 800,
+                    color: 'var(--text-secondary)',
+                    letterSpacing: '1px',
+                    fontFamily: 'var(--font-display)',
+                    textTransform: 'uppercase'
+                  }}
+                >
+                  🔥 JUGADORES CLAVE SELECCIONADOS
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                  URL en Kaggle: <a href="https://www.kaggle.com/" target="_blank" style={{ color: 'var(--nba-gold)', textDecoration: 'none' }}>kaggle.com/nba-stats-2023</a>
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
-                  Librerías principales: <strong>React 19</strong>, <strong>MUI Material 9.0</strong>, <strong>TypeScript</strong>
-                </Typography>
+
+                {/* Cards Carousel Area */}
+                <Box className="scroll-carousel">
+                  {carouselPlayers.map((player) => (
+                    <PlayerCard
+                      key={player.id}
+                      id={player.id}
+                      name={player.name}
+                      rank={player.rank}
+                      rating={player.rating}
+                      team={player.team}
+                      gradient={player.gradient}
+                      isSelected={selectedPlayerIds.includes(player.id)}
+                      onClick={() => handleTogglePlayer(player.id)}
+                    />
+                  ))}
+                  <AddPlayerCard onClick={handleAddNextPlayer} />
+                </Box>
               </Box>
-            </Box>
-          </Grid>
 
-        </Grid>
+              {/* Charts & Tables Grid (Gráfico y Tabla) */}
+              <Grid container spacing={3}>
+                {/* 5. Gráfico (Comparison chart, hidden on xs, block on md+) */}
+                <Grid
+                  size={{ xs: 12, md: 6 }}
+                  sx={{ display: { xs: "none", md: "block" } }}
+                >
+                  <StatsChart selectedPlayers={selectedPlayersData} />
+                </Grid>
+
+                {/* 6. Tabla (Stats Table, hidden on xs, block on md+) */}
+                <Grid
+                  size={{ xs: 12, md: 6 }}
+                  sx={{ display: { xs: "none", md: "block" } }}
+                >
+                  <StatsTable
+                    onSelectPlayerByName={handleSelectPlayerByName}
+                    selectedTeam={selectedTeam}
+                    players={allPlayers}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+
+            {/* 7. Información adicional (Footer references/documentation links) */}
+            <Grid size={{ xs: 12 }} sx={{ mt: 5 }}>
+              <Box
+                className="glass-panel"
+                sx={{
+                  p: 3,
+                  bgcolor: 'rgba(10, 13, 22, 0.4)',
+                  borderColor: 'rgba(255, 255, 255, 0.04)',
+                  textAlign: 'left'
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'var(--nba-orange)', mb: 1, fontFamily: 'var(--font-display)' }}>
+                  INFORMACIÓN Y FUENTE DE DATOS
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.5, fontSize: '0.85rem' }}>
+                  Este dashboard consume estadísticas en tiempo real desde la base de datos de Firebase Realtime Database. La estructura de rejilla y la responsividad están desarrolladas usando <strong>MUI Grid</strong>, permitiendo visualizaciones fluidas en tablets, computadoras y smartphones.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                  <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
+                    Fuente en la Nube: <strong>Firebase Realtime Database</strong>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
+                    Dataset Original: <a href="https://www.kaggle.com/" target="_blank" style={{ color: 'var(--nba-gold)', textDecoration: 'none' }}>2023_nba_player_stats (Kaggle)</a>
+                  </Typography>
+                </Box>
+              </Box>
+            </Grid>
+
+          </Grid>
+        )}
       </Container>
     </Box>
   );
 }
+

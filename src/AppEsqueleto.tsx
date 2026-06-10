@@ -68,6 +68,7 @@ export default function AppEsqueleto() {
               onSelectPlayerByName={handleNoOp}
               selectedTeam={null}
               onSelectTeam={handleNoOp}
+              players={[]}
             />
           </Grid>
 
@@ -121,7 +122,7 @@ export default function AppEsqueleto() {
                 size={{ xs: 12, md: 6 }}
                 sx={{ display: { xs: "none", md: "block" } }}
               >
-                <StatsTable onSelectPlayerByName={handleNoOp} selectedTeam={null} />
+                <StatsTable onSelectPlayerByName={handleNoOp} selectedTeam={null} players={[]} />
               </Grid>
             </Grid>
           </Grid>
