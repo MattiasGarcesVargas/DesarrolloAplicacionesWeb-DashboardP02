@@ -267,7 +267,7 @@ export default function App() {
                   INFORMACIÓN Y FUENTE DE DATOS
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'var(--text-secondary)', mb: 1.5, fontSize: '0.85rem' }}>
-                  Este dashboard consume estadísticas en tiempo real desde la base de datos de Firebase Realtime Database. La estructura de rejilla y la responsividad están desarrolladas usando <strong>MUI Grid</strong>, permitiendo visualizaciones fluidas en tablets, computadoras y smartphones.
+                  Este dashboard consume estadísticas en tiempo real desde la base de datos de Firebase Realtime Database.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                   <Typography variant="caption" sx={{ color: 'var(--text-muted)' }}>
